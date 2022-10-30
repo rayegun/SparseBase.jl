@@ -50,9 +50,7 @@ function hasfixedsparsity end
 True if internals may be accessed directly. C owned types often set this to true.
 ```
 function isopaque end
-
-# This is already be covered by Base, but we might want different semantics?
-function hasscalarindexing end
+# additionally a GraphBLAS.jl implementation wants this to be true.
 
 # FUNCTION TRAITS:
 ##################
@@ -67,19 +65,15 @@ function hasscalarindexing end
 6. a few more
 
 for various functions. All the sparse functions take advantage of some subset of this info.
+
+A big problem is I also think we want these to depend on the element type in some cases.
+So we might want it to be `isassociative(f, T...)`.
 =#
 
 # High level functions:
 #######################################
-
-# Elementwise functionality:
-# This is bold, but I think I prefer it:
-
 # metadata
 const nnz = SparseArrays.nnz
-
-# Fill / Implicit Values:
-#########################
 
 # @Willow I very strongly want `missing` to be an acceptable fill value,
 # or something else similar.
@@ -87,7 +81,9 @@ const nnz = SparseArrays.nnz
 # SparseMatrix{T, F}, where eltype(::SparseMatrix{T, F}) = Union{T, F}
 # Thoughts?
 # I don't really want to match `missing` behavior though. 
-# That is I want a `novalue` that will act like the identity.
+# That is I want a `novalue` that will act like the identity 
+#   (or perhaps more generally "do the sparse thing")
+
 # Maybe a new third option to Nothing and Missing
 ```
     getfill(A)
@@ -106,8 +102,16 @@ Set the value taken by implicit indices of A to a new value.
 function setfill end
 function setfill! end
 
-function filltype end # eltype for most matrices, could be Union{eltype, Missing}
+function filltype end # eltype for most matrices, could be Union{eltype, Missing/NoValue} for graphs
 
+# For everything below this:
+# How to let users select implementation? If I have a HyperSparseMatrix defined in HyperSparseMatrices.jl
+# how do I say: I want Finch to do this. Should we have a last argument executor? 
+# Could also let us support CUDA/ROCm in the future? 
+# This will also come up when we want to map canonical Finch kernels down to MKL/CUDA/SSGrB/etc.
+# Importantly, can we come up with a default? Can we somehow make Finch override the default if it's available?
+# Or maybe we set "compilers" to be the default. This is an incredibly hard design problem.
+# Since we might want it to depend on runtime properties of arrays as well.
 # mapping
 ##########
 ```
@@ -193,4 +197,11 @@ abstract type LevelFormat end
 # With this capability in hand we could then have `@finch` macro that takes this for loop structure
 # and compiles it to a much faster version.
 # Design TBD.
+
+# SOLVER FUNCTIONALITY:
+#######################
+# not yet sure on this one, starting to split solvers out right now.
+# v0.2 I'll know more about what we need here to make this easier to impl
+
+
 end
