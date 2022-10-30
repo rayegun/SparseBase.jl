@@ -1,16 +1,16 @@
-using AbstractSparse
+using SparseBase
 using Documenter
 
-DocMeta.setdocmeta!(AbstractSparse, :DocTestSetup, :(using AbstractSparse); recursive=true)
+DocMeta.setdocmeta!(SparseBase, :DocTestSetup, :(using SparseBase); recursive=true)
 
 makedocs(;
-    modules=[AbstractSparse],
+    modules=[SparseBase],
     authors="Will Kimmerer <kimmerer@mit.edu> and contributors",
-    repo="https://github.com/Wimmerer/AbstractSparse.jl/blob/{commit}{path}#{line}",
-    sitename="AbstractSparse.jl",
+    repo="https://github.com/Wimmerer/SparseBase.jl/blob/{commit}{path}#{line}",
+    sitename="SparseBase.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://Wimmerer.github.io/AbstractSparse.jl",
+        canonical="https://Wimmerer.github.io/SparseBase.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/Wimmerer/AbstractSparse.jl",
+    repo="github.com/Wimmerer/SparseBase.jl",
     devbranch="main",
 )

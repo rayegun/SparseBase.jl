@@ -51,6 +51,6 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using AbstractSparse
-            DocMeta.setdocmeta!(AbstractSparse, :DocTestSetup, :(using AbstractSparse); recursive=true)
-            doctest(AbstractSparse)'
+            using SparseBase
+            DocMeta.setdocmeta!(SparseBase, :DocTestSetup, :(using SparseBase); recursive=true)
+            doctest(SparseBase)'

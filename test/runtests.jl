@@ -1,6 +1,6 @@
-using AbstractSparse
+using SparseBase
 using Test
 
-@testset "AbstractSparse.jl" begin
+@testset "SparseBase.jl" begin
     # Write your tests here.
 end

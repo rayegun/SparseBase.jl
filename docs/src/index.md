@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = AbstractSparse
+CurrentModule = SparseBase
 ```
 
-# AbstractSparse
+# SparseBase
 
-Documentation for [AbstractSparse](https://github.com/Wimmerer/AbstractSparse.jl).
+Documentation for [SparseBase](https://github.com/Wimmerer/SparseBase.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [AbstractSparse]
+Modules = [SparseBase]
 ```

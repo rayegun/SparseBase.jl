@@ -8,7 +8,7 @@ git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
 uuid = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
 version = "0.0.1"
 
-[[deps.AbstractSparse]]
+[[deps.SparseBase]]
 path = ".."
 uuid = "8047a082-0763-4c4f-a23b-a4a948721f1d"
 version = "0.1.0"
