@@ -115,9 +115,9 @@ function filltype end # eltype for most matrices, could be Union{eltype, Missing
 # mapping
 ##########
 ```
-    mapsparse[!](f, [C], A)
-    mapsparse(f, A ∪ B)
-    mapsparse(f, (A ∩ B) ∪ C)
+    mapstored[!](f, [C], A)
+    mapstored(f, A ∪ B)
+    mapstored(f, (A ∩ B) ∪ C)
 
 Map a function over the stored values of A(, B, C, ...).
 
@@ -134,10 +134,10 @@ to do `NONSTORED + 2.0 = 2.0` for the `eadd` operation.
 `UnionPattern`, `IntersectionPattern` (maybe `ComplementPattern`?). I don't think these
 wrappers are quite as bad as the ones in LinAlg, but I could be wrong.
 
-Current implementations (SSGrB) only implement `mapsparse[!](f, [C], A)
+Current implementations (SSGrB) only implement `mapstored[!](f, [C], A)
 ```
-function mapsparse! end
-function mapsparse end
+function mapstored! end
+function mapstored end
 
 # How do I accept `f(i..., x)` for mapping purposes? API question. `TakeIndices` function wrapper?
 # Or even better a trait on the function? 
