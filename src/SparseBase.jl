@@ -77,16 +77,11 @@ So we might want it to be `isassociative(f, T...)`.
 # metadata
 const nnz = SparseArrays.nnz
 
-# @Willow I very strongly want `missing` to be an acceptable fill value,
+# @Willow I very strongly want `novalue` to be an acceptable fill value,
 # or something else similar.
 # Quite useful for graphs. That would mean that `A` might have two eltypes:
 # SparseMatrix{T, F}, where eltype(::SparseMatrix{T, F}) = Union{T, F}
 # Thoughts?
-# I don't really want to match `missing` behavior though. 
-# That is I want a `novalue` that will act like the identity 
-#   (or perhaps more generally "do the sparse thing")
-
-# Maybe a new third option to Nothing and Missing
 ```
     getfill(A)
 
@@ -104,7 +99,8 @@ Set the value taken by implicit indices of A to a new value.
 function setfill end
 function setfill! end
 
-function filltype end # eltype for most matrices, could be Union{eltype, Missing/NoValue} for graphs
+# eltype for most matrices, could be Union{eltype, Missing/NoValue} for graphs
+filltype(A::AbstractArray) = eltype(A)
 
 # For everything below this:
 # How to let users select implementation? If I have a HyperSparseMatrix defined in HyperSparseMatrices.jl
@@ -180,15 +176,17 @@ function storedvalues end
 We want to say "what are the level formats for some array". This requires names,
 without implementations. For that purpose we want something like:
 =#
-abstract type NamedLevelFormat end
-struct DenseLevel end
-struct BitMapLevel end
-struct SparseListLevel end # is this compressed level or singleton level? Don't remember off top of head.
-struct UnknownLevel end # for C resident codes? We could maybe ensure safe(ish) fallbacks here?
+abstract type LevelFormat end
+struct DenseLevel <: LevelFormat end
+struct BitMapLevel <: LevelFormat end
+struct SparseListLevel <: LevelFormat end # is this compressed level or singleton level? Don't remember off top of head.
+struct UnknownLevel <: LevelFormat end # for C resident codes? We could maybe ensure safe(ish) fallbacks here?
+struct SingletonLevel <: LevelFormat end
+# what do you think of a FunctionLevel @Willow?
+# it's in a sense opaque, but could implement some otherwise difficult levels
+# struct FunctionLevel <: LevelFormat end
 #etc
 
-# But we might also want actual level implementations here? 
-abstract type LevelFormat end
 # but what are the names here?
 
 # ITERATION FUNCTIONALITY:
