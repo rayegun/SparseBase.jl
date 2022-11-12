@@ -1,5 +1,7 @@
 module SparseBase
 
+include("novalue.jl")
+
 import StorageOrders
 import SparseArrays
 # Trait(ish):
