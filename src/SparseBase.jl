@@ -100,6 +100,12 @@ function setfill end
 function setfill! end
 
 # eltype for most matrices, could be Union{eltype, Missing/NoValue} for graphs
+```
+    filltype(A)
+
+Type of implicit values of A. Most arrays either have no fill, or only support fill
+in the same domain as eltype(A).
+```
 filltype(A::AbstractArray) = eltype(A)
 
 # For everything below this:
@@ -139,6 +145,9 @@ function mapstored end
 
 # How do I accept `f(i..., x)` for mapping purposes? API question. `TakeIndices` function wrapper?
 # Or even better a trait on the function? 
+
+function reducestored! end
+function reducestored end
 
 ```
     fkeep!(f, [C], A)
