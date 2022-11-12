@@ -187,7 +187,8 @@ struct SingletonLevel <: LevelFormat end
 # struct FunctionLevel <: LevelFormat end
 #etc
 
-# but what are the names here?
+levelformat(A::AbstractArray) = ntuple(x->DenseLevel(), ndims(A))
+levelformat(A::AbstractArray, i::Integer) = levelformat(A)[i]
 
 # ITERATION FUNCTIONALITY:
 ##########################
