@@ -199,6 +199,13 @@ struct SingletonLevel <: LevelFormat end
 levelformat(A::AbstractArray) = ntuple(x->DenseLevel(), ndims(A))
 levelformat(A::AbstractArray, i::Integer) = levelformat(A)[i]
 
+# CONVERSION:
+#############
+
+# Should likely have barebones implementations of AoS and SoA COO here.
+# strictly to support conversions between types.
+# COO should exist in a separate package with a more user friendly interface.
+
 # ITERATION FUNCTIONALITY:
 ##########################
 
