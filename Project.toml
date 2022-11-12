@@ -4,6 +4,7 @@ authors = ["Will Kimmerer <kimmerer@mit.edu> and contributors"]
 version = "0.1.0"
 
 [deps]
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StorageOrders = "e9177fbf-8fde-426c-9425-4eed0f22262a"
 
 [compat]

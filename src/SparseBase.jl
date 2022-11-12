@@ -19,15 +19,15 @@ const NoOrder = StorageOrders.NoOrder
 # operates on types, not on values.
 function issparse end
 
-```
+"""
     isisovalued(A)::Bool
 
 True if a type contains a single value across all explicit indices.
 May be compile time, for instance UniformScaling.
-```
+"""
 function isisovalued end
 
-```
+"""
     haszerobasedinternals(::Type{A})::Bool
 
 True if a type has zero based internal vectors.
@@ -35,22 +35,22 @@ True if a type has zero based internal vectors.
 This *does not* indicate that `A` is indexed in a zero-based manner,
 just that the internal representation is zero based. This is useful if C libs
 implement much of the functionality of A.
-```
+"""
 function haszerobasedinternals end
 
-```
+"""
     hasfixedsparsity(::Type{A})::Bool
 
 True if the sparsity pattern of the type `A` may be changed.
 A `Diagonal` type, for instance, may not have its sparsity pattern changed.
-```
+"""
 function hasfixedsparsity end
 
-```
+"""
     isopaque(::Type{A})::Bool
 
 True if internals may be accessed directly. C owned types often set this to true.
-```
+"""
 function isopaque end
 # additionally a GraphBLAS.jl implementation wants this to be true.
 
@@ -82,30 +82,30 @@ const nnz = SparseArrays.nnz
 # Quite useful for graphs. That would mean that `A` might have two eltypes:
 # SparseMatrix{T, F}, where eltype(::SparseMatrix{T, F}) = Union{T, F}
 # Thoughts?
-```
+"""
     getfill(A)
 
 The value taken by all non-stored/implicit indices of A.
-```
+"""
 function getfill end
 
-```
+"""
     setfill!(A)::A
     setfill(A)::B
 
 Set the value taken by implicit indices of A to a new value.
 `setfill` produces a shallow copy of A with the new fill value.
-```
+"""
 function setfill end
 function setfill! end
 
 # eltype for most matrices, could be Union{eltype, Missing/NoValue} for graphs
-```
+"""
     filltype(A)
 
 Type of implicit values of A. Most arrays either have no fill, or only support fill
 in the same domain as eltype(A).
-```
+"""
 filltype(A::AbstractArray) = eltype(A)
 
 # For everything below this:
@@ -118,7 +118,7 @@ filltype(A::AbstractArray) = eltype(A)
 # Since we might want it to depend on runtime properties of arrays as well.
 # mapping
 ##########
-```
+"""
     mapstored[!](f, [C], A)
     mapstored(f, A ∪ B)
     mapstored(f, (A ∩ B) ∪ C)
@@ -139,7 +139,7 @@ to do `NONSTORED + 2.0 = 2.0` for the `eadd` operation.
 wrappers are quite as bad as the ones in LinAlg, but I could be wrong.
 
 Current implementations (SSGrB) only implement `mapstored[!](f, [C], A)
-```
+"""
 function mapstored! end
 function mapstored end
 
@@ -149,11 +149,11 @@ function mapstored end
 function reducestored! end
 function reducestored end
 
-```
+"""
     fkeep!(f, [C], A)
 
 Keep values of `A` where `f` is true. `f(i..., x)::Bool`
-```
+"""
 function fkeep! end
 function fkeep end
 
@@ -161,22 +161,22 @@ function fkeep end
 #################
 # required for extreme fallback construciton between two types.
 
-```
+"""
     storedindices(A)
 
 An iterable over the stored indices of `A`. May be a direct view into internals,
 but is invalid to modify. May be a lazy iterator.
 
 Returned indices should be a tuple (AoS) form.
-```
+"""
 function storedindices end
 
-```
+"""
     storedvalues(A)
 
 An iterable over the stored values of `A`. May be a direct view into internals, 
 but this is not a requirement, and so shouldn't be used to modify A.
-```
+"""
 function storedvalues end
 
 # LEVEL FORMATS:
