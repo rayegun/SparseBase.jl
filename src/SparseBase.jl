@@ -166,6 +166,8 @@ function fkeep end
 
 An iterable over the stored indices of `A`. May be a direct view into internals,
 but is invalid to modify. May be a lazy iterator.
+
+Returned indices should be a tuple (AoS) form.
 ```
 function storedindices end
 
