@@ -1,9 +1,13 @@
 module SparseBase
-
+abstract type AbstractSparseArray{Bi, Tv, Tfill, Ti, N} <: AbstractArray{Tv, N} end
+const AbstractSparseVector{Bi, Tv, Tfill, Ti} = AbstractSparseArray{Bi, Tv, Tfill, Ti, 1}
+const AbstractSparseMatrix{Bi, Tv, Tfill, Ti} = AbstractSparseArray{Bi, Tv, Tfill, Ti, 2}
 include("novalue.jl")
+include("coo.jl")
+using .NoValues
+export novalue, NoValue
 
 import StorageOrders
-import SparseArrays
 # Trait(ish):
 
 # storage order stuff:
@@ -15,9 +19,11 @@ const ColMajor = StorageOrders.ColMajor
 const RuntimeOrder = StorageOrders.RuntimeOrder
 const NoOrder = StorageOrders.NoOrder
 
+export ColMajor, RowMajor, RuntimeOrder, NoOrder
+
 # functionality should be clear, there are implicit values.
 # operates on types, not on values.
-function issparse end
+issparse(::Any) = false
 
 """
     isisovalued(A)::Bool
@@ -25,7 +31,7 @@ function issparse end
 True if a type contains a single value across all explicit indices.
 May be compile time, for instance UniformScaling.
 """
-function isisovalued end
+isisovalued(::Any) = false
 
 """
     haszerobasedinternals(::Type{A})::Bool
@@ -36,7 +42,12 @@ This *does not* indicate that `A` is indexed in a zero-based manner,
 just that the internal representation is zero based. This is useful if C libs
 implement much of the functionality of A.
 """
-function haszerobasedinternals end
+haszerobasedinternals(::AbstractSparseArray) = false
+haszerobasedinternals(::AbstractSparseArray{0}) = true
+
+getoffset(::Any) = 0
+@inline getoffset(Bi::Integer) = 1 - Bi
+@inline getoffset(::AbstractSparseArray{Bi}) where Bi = getoffset(Bi)
 
 """
     hasfixedsparsity(::Type{A})::Bool
@@ -44,14 +55,14 @@ function haszerobasedinternals end
 True if the sparsity pattern of the type `A` may be changed.
 A `Diagonal` type, for instance, may not have its sparsity pattern changed.
 """
-function hasfixedsparsity end
+hasfixedsparsity(::Any) = false
 
 """
     isopaque(::Type{A})::Bool
 
 True if internals may be accessed directly. C owned types often set this to true.
 """
-function isopaque end
+isopaque(::Any) = false
 # additionally a GraphBLAS.jl implementation wants this to be true.
 
 # FUNCTION TRAITS:
@@ -75,7 +86,16 @@ So we might want it to be `isassociative(f, T...)`.
 # High level functions:
 #######################################
 # metadata
-const nnz = SparseArrays.nnz
+"""
+    nstored(A)::Integer
+
+Number of stored elements in `A`.
+In the dense case this is `length(A)`
+"""
+nstored(A) = length(A) # default to the dense case.
+
+nsparsedims(A) = 0
+ndensedims(A) = ndims(A)
 
 # @Willow I very strongly want `novalue` to be an acceptable fill value,
 # or something else similar.
@@ -87,7 +107,7 @@ const nnz = SparseArrays.nnz
 
 The value taken by all non-stored/implicit indices of A.
 """
-function getfill end
+getfill(A::AbstractSparseArray) = A.fill
 
 """
     setfill!(A)::A
@@ -107,6 +127,7 @@ Type of implicit values of A. Most arrays either have no fill, or only support f
 in the same domain as eltype(A).
 """
 filltype(A::AbstractArray) = eltype(A)
+filltype(::AbstractSparseArray{<:Any, <:Any, Tfill}) where Tfill = Tfill
 
 # For everything below this:
 # How to let users select implementation? If I have a HyperSparseMatrix defined in HyperSparseMatrices.jl
@@ -159,7 +180,7 @@ function fkeep end
 
 # To coordinates:
 #################
-# required for extreme fallback construciton between two types.
+# required for extreme fallback construction between two types.
 
 """
     storedindices(A)
@@ -221,6 +242,4 @@ levelformat(A::AbstractArray, i::Integer) = levelformat(A)[i]
 #######################
 # not yet sure on this one, starting to split solvers out right now.
 # v0.2 I'll know more about what we need here to make this easier to impl
-
-
 end

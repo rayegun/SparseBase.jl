@@ -1,3 +1,15 @@
+module NoValues
+import Base: !, ~, +, -, *, &, |, xor,
+    zero, one, oneunit,
+    isfinite, isinf, isodd,
+    isinteger, isreal, isnan,
+    iszero, transpose, adjoint, float, complex, conj,
+    abs, abs2, iseven, ispow2,
+    real, imag, sign, inv,
+    /, ^, mod, rem, min, max
+
+export NoValue, novalue, isnovalue, NoValueException, nonnovaluetype
+
 """
     NoValue
 
@@ -174,3 +186,5 @@ xor(b::Integer, ::NoValue) = b
 
 *(::NoValue, x::Union{AbstractString,AbstractChar}) = x
 *(d::Union{AbstractString,AbstractChar}, ::NoValue) = d
+
+end
