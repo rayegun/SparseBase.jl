@@ -1,5 +1,8 @@
 module CoordinateArrays
 
+# TODO: Perf profiling, memory profiling
+# Perhaps more constructors.
+# Want to keep this minimal, mostly just for ctors for other types and Pending/Zombies
 using ..SparseBase
 using ..SparseBase: AbstractSparseArray, getbase, getoffset, getfill, StorageOrder, 
     RowMajor, ColMajor, comptime_storageorder, runtime_storageorder, NoOrder
