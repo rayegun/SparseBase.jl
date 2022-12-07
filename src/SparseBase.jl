@@ -1,37 +1,43 @@
 module SparseBase
-abstract type AbstractSparseArray{Bi, Tv, Tfill, Ti, N} <: AbstractArray{Tv, N} end
-const AbstractSparseVector{Bi, Tv, Tfill, Ti} = AbstractSparseArray{Bi, Tv, Tfill, Ti, 1}
-const AbstractSparseMatrix{Bi, Tv, Tfill, Ti} = AbstractSparseArray{Bi, Tv, Tfill, Ti, 2}
+abstract type AbstractSparseArray{Tv, Tfill, Bi, Ti, N} <: AbstractArray{Tv, N} end
+const AbstractSparseVector{Tv, Tfill, Bi, Ti} = AbstractSparseArray{Tv, Tfill, Bi, Ti, 1}
+const AbstractSparseMatrix{Tv, Tfill, Bi, Ti} = AbstractSparseArray{Tv, Tfill, Bi, Ti, 2}
 include("novalue.jl")
-include("coo.jl")
-using .NoValues
 export novalue, NoValue
 
 import StorageOrders
-# Trait(ish):
 
 # storage order stuff:
 const comptime_storageorder = StorageOrders.comptime_storageorder
 const runtime_storageorder = StorageOrders.runtime_storageorder
 const storageorder = StorageOrders.storageorder
+const StorageOrder = StorageOrders.StorageOrder
 const RowMajor = StorageOrders.RowMajor
 const ColMajor = StorageOrders.ColMajor
 const RuntimeOrder = StorageOrders.RuntimeOrder
 const NoOrder = StorageOrders.NoOrder
 
-export ColMajor, RowMajor, RuntimeOrder, NoOrder
+export ColMajor, RowMajor, RuntimeOrder, NoOrder, storageorder
 
 # functionality should be clear, there are implicit values.
-# operates on types, not on values.
+"""
+    issparse(::T)::Bool
+    issparse(::DataType{T})::Bool
+
+`true` if `T` is a sparse type.
+A sparse container is still considered sparse if all indices are explicitly stored.
+"""
 issparse(::Any) = false
 
 """
     isisovalued(A)::Bool
 
 True if a type contains a single value across all explicit indices.
-May be compile time, for instance UniformScaling.
 """
 isisovalued(::Any) = false
+
+
+
 
 """
     haszerobasedinternals(::Type{A})::Bool
@@ -39,15 +45,17 @@ isisovalued(::Any) = false
 True if a type has zero based internal vectors.
 
 This *does not* indicate that `A` is indexed in a zero-based manner,
-just that the internal representation is zero based. This is useful if C libs
-implement much of the functionality of A.
+Instead, the internal representation is zero based. This is useful if C libraries
+implement much of the functionality of A, or A is frequently based to 0 based solvers.
 """
 haszerobasedinternals(::AbstractSparseArray) = false
-haszerobasedinternals(::AbstractSparseArray{0}) = true
+haszerobasedinternals(::AbstractSparseArray{<:Any, <:Any, 0}) = true # should be in terms of getbase
+
+getbase(::AbstractSparseArray{<:Any, <:Any, <:Bi}) where Bi = Bi
 
 getoffset(::Any) = 0
 @inline getoffset(Bi::Integer) = 1 - Bi
-@inline getoffset(::AbstractSparseArray{Bi}) where Bi = getoffset(Bi)
+@inline getoffset(::AbstractSparseArray{<:Any, <:Any, Bi}) where Bi = getoffset(Bi)
 
 """
     hasfixedsparsity(::Type{A})::Bool
@@ -60,7 +68,7 @@ hasfixedsparsity(::Any) = false
 """
     isopaque(::Type{A})::Bool
 
-True if internals may be accessed directly. C owned types often set this to true.
+True if internals may not be accessed directly. C owned types often set this to true.
 """
 isopaque(::Any) = false
 # additionally a GraphBLAS.jl implementation wants this to be true.
@@ -83,9 +91,9 @@ A big problem is I also think we want these to depend on the element type in som
 So we might want it to be `isassociative(f, T...)`.
 =#
 
-# High level functions:
+
+# Metadata
 #######################################
-# metadata
 """
     nstored(A)::Integer
 
@@ -94,20 +102,12 @@ In the dense case this is `length(A)`
 """
 nstored(A) = length(A) # default to the dense case.
 
-nsparsedims(A) = 0
-ndensedims(A) = ndims(A)
-
-# @Willow I very strongly want `novalue` to be an acceptable fill value,
-# or something else similar.
-# Quite useful for graphs. That would mean that `A` might have two eltypes:
-# SparseMatrix{T, F}, where eltype(::SparseMatrix{T, F}) = Union{T, F}
-# Thoughts?
 """
     getfill(A)
 
 The value taken by all non-stored/implicit indices of A.
 """
-getfill(A::AbstractSparseArray) = A.fill
+function getfill end
 
 """
     setfill!(A)::A
@@ -127,16 +127,22 @@ Type of implicit values of A. Most arrays either have no fill, or only support f
 in the same domain as eltype(A).
 """
 filltype(A::AbstractArray) = eltype(A)
-filltype(::AbstractSparseArray{<:Any, <:Any, Tfill}) where Tfill = Tfill
+filltype(::AbstractSparseArray{<:Any, Tfill}) where Tfill = Tfill
+
+storedtype(A::AbstractArray) = eltype(A)
+storedtype(::AbstractSparseArray{T}) where T = T
+
+Base.eltype(A::AbstractSparseArray) = Union{filltype(A), storedtype(A)}
 
 # For everything below this:
 # How to let users select implementation? If I have a HyperSparseMatrix defined in HyperSparseMatrices.jl
-# how do I say: I want Finch to do this. Should we have a last argument executor? 
+# how do I say: I want Finch to do this.
 # Could also let us support CUDA/ROCm in the future? 
 # This will also come up when we want to map canonical Finch kernels down to MKL/CUDA/SSGrB/etc.
 # Importantly, can we come up with a default? Can we somehow make Finch override the default if it's available?
-# Or maybe we set "compilers" to be the default. This is an incredibly hard design problem.
-# Since we might want it to depend on runtime properties of arrays as well.
+# Or maybe we set "compilers" to be the default.
+# We might want it to depend on runtime properties of arrays as well.
+
 # mapping
 ##########
 """
@@ -188,7 +194,7 @@ function fkeep end
 An iterable over the stored indices of `A`. May be a direct view into internals,
 but is invalid to modify. May be a lazy iterator.
 
-Returned indices should be a tuple (AoS) form.
+Returned indices should be a tuple (SoA) form.
 """
 function storedindices end
 
@@ -214,7 +220,7 @@ struct BitMapLevel <: LevelFormat end
 struct SparseListLevel <: LevelFormat end # is this compressed level or singleton level? Don't remember off top of head.
 struct UnknownLevel <: LevelFormat end # for C resident codes? We could maybe ensure safe(ish) fallbacks here?
 struct SingletonLevel <: LevelFormat end
-# what do you think of a FunctionLevel @Willow?
+# Other levels @Willow?
 # it's in a sense opaque, but could implement some otherwise difficult levels
 # struct FunctionLevel <: LevelFormat end
 #etc
@@ -242,4 +248,14 @@ levelformat(A::AbstractArray, i::Integer) = levelformat(A)[i]
 #######################
 # not yet sure on this one, starting to split solvers out right now.
 # v0.2 I'll know more about what we need here to make this easier to impl
+
+# CoordinateArrays: found here since most sparse arrays must be able to import from COO.
+# It is also very useful for an insertion/deletion list for other sparse types.
+include("coo.jl")
+
+const CoordinateArray = CoordinateArrays.CoordinateArray
+const unjumble! = CoordinateArrays.unjumble!
+const unjumble = CoordinateArrays.unjumble
+export CoordinateArray, unjumble!, unjumble
+
 end

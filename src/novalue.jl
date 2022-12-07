@@ -50,23 +50,23 @@ showerror(io::IO, ex::NoValueException) =
     print(io, "NoValueException: ", ex.msg)
 
 """
-    nonnovaluetype(T::Type)
+    rmnovaluetype(T::Type)
 
 If `T` is a union of types containing `NoValue`, return a new type with
 `NoValue` removed.
 
 # Examples
 ```jldoctest
-julia> nonnovaluetype(Union{Int64,NoValue})
+julia> rmnovaluetype(Union{Int64,NoValue})
 Int64
 
-julia> nonnovaluetype(Any)
+julia> rmnovaluetype(Any)
 Any
 ```
 """
-nonnovaluetype(::Type{T}) where {T} = typesplit(T, NoValue)
+rmnovaluetype(::Type{T}) where {T} = typesplit(T, NoValue)
 
-function nonnovaluetype_checked(T::Type)
+function rmnovaluetype_checked(T::Type)
     R = nonnovaluetype(T)
     R >: T && error("could not compute non-novalue type")
     return R
