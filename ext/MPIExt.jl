@@ -7,9 +7,9 @@ using SparseBase.Communication: ContinuousPartitioning, localpart, partition_siz
 
 # TODO: vector types should be handled better.
 
-function Communication.localindices(D::DistributedSparseStore)
-    return D.partition[MPI.Comm_rank(D.comm) + 1]
-end
+# function Communication.localindices(D::DistributedSparseStore)
+#     return D.partition[MPI.Comm_rank(D.comm) + 1]
+# end
 
 function Communication.bcaststore!(store::CoordinateStore, root::Integer, comm::MPI.Comm)
     rank = MPI.Comm_rank(comm)
