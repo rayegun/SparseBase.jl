@@ -1,12 +1,42 @@
 module NoValues
-import Base: !, ~, +, -, *, &, |, xor,
-    zero, one, oneunit,
-    isfinite, isinf, isodd,
-    isinteger, isreal, isnan,
-    iszero, transpose, adjoint, float, complex, conj,
-    abs, abs2, iseven, ispow2,
-    real, imag, sign, inv,
-    /, ^, mod, rem, min, max
+import Base:
+    !,
+    ~,
+    +,
+    -,
+    *,
+    &,
+    |,
+    xor,
+    zero,
+    one,
+    oneunit,
+    isfinite,
+    isinf,
+    isodd,
+    isinteger,
+    isreal,
+    isnan,
+    iszero,
+    transpose,
+    adjoint,
+    float,
+    complex,
+    conj,
+    abs,
+    abs2,
+    iseven,
+    ispow2,
+    real,
+    imag,
+    sign,
+    inv,
+    /,
+    ^,
+    mod,
+    rem,
+    min,
+    max
 
 export NoValue, novalue, isnovalue, NoValueException, nonnovaluetype
 
@@ -46,8 +76,7 @@ struct NoValueException <: Exception
     msg::String
 end
 
-showerror(io::IO, ex::NoValueException) =
-    print(io, "NoValueException: ", ex.msg)
+showerror(io::IO, ex::NoValueException) = print(io, "NoValueException: ", ex.msg)
 
 """
     rmnovaluetype(T::Type)
@@ -99,6 +128,12 @@ promote_rule(::Type{NoValue}, S::Type) = S
 # convert(::Type{T}, x) where {T>:NoValue} = convert(nonmissingtype_checked(T), x)
 # convert(::Type{T}, x) where {T>:Union{NoValue, Nothing}} = convert(nonmissingtype_checked(nonnothingtype_checked(T)), x)
 
+function convert(::Type{T}, ::NoValue) where {T}
+    return ArgumentError(
+        "Cannot convert NoValue to $T. Likely missing a setfill somewhere!"
+    )
+end
+
 # What's the identity of a comparison operator???
 # I'll have to think on the graph implications of this.
 # and when you want to use them...
@@ -122,50 +157,85 @@ promote_rule(::Type{NoValue}, S::Type) = S
 # isapprox(::Any, ::NoValue; kwargs...) = missing
 
 # Unary operators/functions
-for f in (:(!), :(~), :(+), :(-), :(*), :(&), :(|), :(xor),
-          :(zero), :(one), :(oneunit),
-          :(isfinite), :(isinf), :(isodd),
-          :(isinteger), :(isreal), :(isnan),
-          :(iszero), :(transpose), :(adjoint), :(float), :(complex), :(conj),
-          :(abs), :(abs2), :(iseven), :(ispow2),
-          :(real), :(imag), :(sign), :(inv))
+for f in (
+    :(!),
+    :(~),
+    :(+),
+    :(-),
+    :(*),
+    :(&),
+    :(|),
+    :(xor),
+    :(zero),
+    :(one),
+    :(oneunit),
+    :(isfinite),
+    :(isinf),
+    :(isodd),
+    :(isinteger),
+    :(isreal),
+    :(isnan),
+    :(iszero),
+    :(transpose),
+    :(adjoint),
+    :(float),
+    :(complex),
+    :(conj),
+    :(abs),
+    :(abs2),
+    :(iseven),
+    :(ispow2),
+    :(real),
+    :(imag),
+    :(sign),
+    :(inv),
+)
     @eval ($f)(::NoValue) = novalue
 end
 for f in (:(Base.zero), :(Base.one), :(Base.oneunit))
     @eval ($f)(::Type{NoValue}) = novalue
-    @eval function $(f)(::Type{Union{T, NoValue}}) where T
+    @eval function $(f)(::Type{Union{T,NoValue}}) where {T}
         T === Any && throw(MethodError($f, (Any,)))  # To prevent StackOverflowError
-        $f(T)
+        return $f(T)
     end
 end
 for f in (:(Base.float), :(Base.complex))
     @eval $f(::Type{NoValue}) = NoValue
-    @eval function $f(::Type{Union{T, NoValue}}) where T
+    @eval function $f(::Type{Union{T,NoValue}}) where {T}
         T === Any && throw(MethodError($f, (Any,)))  # To prevent StackOverflowError
-        Union{$f(T), NoValue}
+        return Union{$f(T),NoValue}
     end
 end
 
 # Binary operators/functions
 for f in (:(+), :(-), :(*), :(/), :(^), :(mod), :(rem))
     @eval begin
-        # Scalar with novalue
         ($f)(::NoValue, ::NoValue) = novalue
-        ($f)(::NoValue, B::Any)  = B
-        ($f)(A::Any,  ::NoValue) = A
     end
 end
+
+for f in (:(+), :(*))
+    @eval begin
+        ($f)(::NoValue, B::Any) = B
+        ($f)(A::Any, ::NoValue) = A
+    end
+end
+
+(-)(::NoValue, B::Any) = -B
+(-)(A::Any, ::NoValue) = A
+
+# not sure about /, ^, mod and rem. 
 
 # div(::NoValue, ::NoValue, r::RoundingMode) = missing
 # div(::NoValue, ::Number, r::RoundingMode) = missing
 # div(::Number, ::NoValue, r::RoundingMode) = missing
 
-min(::NoValue, ::NoValue)  = novalue
-min(::NoValue, B::Any)     = B
-min(A::Any,    ::NoValue)  = A
-max(::NoValue, ::NoValue)  = novalue
-max(::NoValue, B::Any)     = B
-max(A::Any,    ::NoValue)  = A
+min(::NoValue, ::NoValue) = novalue
+min(::NoValue, B::Any) = B
+min(A::Any, ::NoValue) = A
+max(::NoValue, ::NoValue) = novalue
+max(::NoValue, B::Any) = B
+max(A::Any, ::NoValue) = A
 
 # Bit operators
 (&)(::NoValue, ::NoValue) = novalue

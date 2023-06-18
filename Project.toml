@@ -1,18 +1,33 @@
 name = "SparseBase"
 uuid = "8047a082-0763-4c4f-a23b-a4a948721f1d"
-authors = ["Will Kimmerer <kimmerer@mit.edu> and contributors"]
+authors = ["Raye Kimmerer <kimmerer@mit.edu> and contributors"]
 version = "0.1.0"
 
 [deps]
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+CIndices = "5a98b6c4-18fa-405d-92b3-8277d93fed36"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 StorageOrders = "e9177fbf-8fde-426c-9425-4eed0f22262a"
 
+[weakdeps]
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[extensions]
+MPIExt = "MPI"
+MatrixMarketExt = "MatrixMarket"
+SparseArraysExt = "SparseArrays"
+
 [compat]
-julia = "1"
 StorageOrders = "0.3.1"
+CIndices = "0.3"
+MatrixMarket = "0.5"
+julia = "1"
 
 [extras]
+MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["SparseArrays", "MatrixMarket", "Test"]
