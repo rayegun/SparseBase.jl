@@ -22,7 +22,7 @@ SparseArraysExt = "SparseArrays"
 StorageOrders = "0.3.1"
 CIndices = "0.3"
 MatrixMarket = "0.5"
-julia = "1"
+julia = "1.7"
 
 [extras]
 MatrixMarket = "4d4711f2-db25-561a-b6b3-d35e7d4047d3"
