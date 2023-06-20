@@ -45,35 +45,6 @@ function _mmread(stream::IO, ::Type{Tv}, ::Type{Ti}) where {Tv,Ti}
     return result
 end
 
-function desymmetrizer(rows, cols, values, symm)
-    if symm != "general"
-        l = length(rows)
-        change_values = true
-        if symm == "hermitian"
-            f = conj
-            if !(values isa AbstractArray)
-                values = fill(values, 2l)
-            end
-        elseif symm == "symmetric"
-            f = identity
-            if values isa AbstractArray
-                resize!(values, 2l)
-            else
-                change_values = false
-            end
-        elseif symm == "skew-symmetric"
-            f = -
-            if !(values isa AbstractArray)
-                values = fill(values, 2l)
-            end
-        else
-            throw(MatrixMarket.FileFormatException("Unknown matrix symmetry: $symm."))
-        end
-        change_values ? _desymmetrizer!(f, rows, cols, values) : _desymmetrizer(rows, cols)
-    end
-    return rows, cols, values
-end
-
 function _desymmetrizer!(f, rows, cols, values::AbstractArray)
     l = length(rows)
     resize!.((rows, cols), 2l) #pessimistic, no values on diagonal
@@ -105,6 +76,36 @@ function _desymmetrizer!(rows, cols)
         end
     end
     return resize!.((rows, cols), l + n - 1)
+end
+
+# TODO: fix _desymmetrizer for all Matrix Collection
+function desymmetrizer(rows, cols, values, symm)
+    if symm != "general"
+        l = length(rows)
+        change_values = true
+        if symm == "hermitian"
+            f = conj
+            if !(values isa AbstractArray)
+                values = fill(values, 2l)
+            end
+        elseif symm == "symmetric"
+            f = identity
+            if values isa AbstractArray
+                resize!(values, 2l)
+            else
+                change_values = false
+            end
+        elseif symm == "skew-symmetric"
+            f = -
+            if !(values isa AbstractArray)
+                values = fill(values, 2l)
+            end
+        else
+            throw(MatrixMarket.FileFormatException("Unknown matrix symmetry: $symm."))
+        end
+        change_values ? _desymmetrizer!(f, rows, cols, values) : _desymmetrizer!(rows, cols)
+    end
+    return rows, cols, values
 end
 
 function MatrixMarket.mmread(
