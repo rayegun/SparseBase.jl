@@ -107,4 +107,3 @@ end
 
 # Row < - > Col:
 # rest should get iterators working.
-Base.size(S::SparseStoreOrFormat, d) = d <= ndims(S) ? size(S)[d] : 1

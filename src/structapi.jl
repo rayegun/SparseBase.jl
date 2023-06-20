@@ -124,31 +124,6 @@ defaultfill(::Type{NoValues.NoValue}) = NoValues.novalue()
 defaultfill(::Type{Union{T,NoValues.NoValue}}) where {T} = NoValues.novalue()
 defaultfill(::T) where {T} = defaultfill(T)
 
-"""
-    filltype(A)
-
-Type of implicit values of A. Most arrays either have no fill, or only support fill
-in the same domain as eltype(A).
-"""
-filltype(A::AbstractArray) = eltype(A)
-filltype(::AbstractSparseFormat{<:Any,Tfill}) where {Tfill} = Tfill
-function filltype(::AbstractSparseStore)
-    throw(
-        ArgumentError(
-            "Sparse stores have no fill, they must be wrapped in an AbstractSparseFormat"
-        ),
-    )
-end
-
-storedeltype(A::AbstractArray) = eltype(A)
-storedeltype(::SparseStoreOrFormat{T}) where {T} = T
-
-Base.eltype(A::AbstractSparseFormat) = Union{filltype(A),storedeltype(A)}
-Base.eltype(A::AbstractSparseStore) = storedeltype(A)
-
-indexeltype(::AbstractSparseStore{<:Any,<:Any,Ti}) where {Ti} = Ti
-indexeltype(::Type{AbstractSparseStore{<:Any,<:Any,Ti}}) where {Ti} = Ti
-
 # For everything below this:
 # How to let users select implementation? If I have a HyperSparseMatrix defined in HyperSparseMatrices.jl
 # how do I say: I want Finch to do this.

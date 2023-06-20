@@ -132,8 +132,8 @@ function SinglyCompressedStore(
     )
 end
 
-CSCStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,ColMajor(),Tindex,V,I,N}
-CSRStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,RowMajor(),Tindex,V,I,N}
+const CSCStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,ColMajor(),Tindex,V,I,N}
+const CSRStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,RowMajor(),Tindex,V,I,N}
 
 function CSCStore(
     ptr::I, idx::I, v::V, size::Dims{2}; isuniform=false, uniformv=defaultfill(eltype(V))

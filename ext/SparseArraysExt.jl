@@ -45,6 +45,20 @@ function Base.convert(
         colptrs, rowvals, v, size(A)..., false, zero(Tvnew)
     )
 end
+function Base.convert(
+    E::SparseBase.Executor,
+    ::Type{<:CSCStore{Tvnew}},
+    A::AbstractSparseMatrixCSC{Tvalues,Tindex},
+) where {Tvalues,Tindex,Tvnew}
+    convert(E, CSCStore{Tvnew, Tindex}, A)
+end
+function Base.convert(
+    E::SparseBase.Executor,
+    ::Type{<:CSCStore},
+    A::AbstractSparseMatrixCSC{Tvalues,Tindex},
+) where {Tvalues,Tindex}
+    convert(E, CSCStore{Tvalues, Tindex}, A)
+end
 
 function Base.convert(T::Type{<:CSCStore}, s::AbstractSparseMatrixCSC)
     return convert(getexecutor(Base.convert, T, s), T, s)
