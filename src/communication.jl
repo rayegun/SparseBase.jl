@@ -67,7 +67,7 @@ end
 getmemchunks(::Nothing, extents) = nothing
 
 function _splitmem(A, part::ContinuousPartitioning)
-    count(i -> i == 1, size(part)) == 1 ||
+    (count(i -> i == 1, size(part)) == 1 || sum(size(part)) == ndims(part)) ||
         error("_splitmem only supports splitting down a single dimension.")
     dim = storageorder(A) === RowMajor() ? 1 : ndims(A)
     return _splitmem(localpart(A), part.index_ends[dim])
