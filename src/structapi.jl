@@ -17,8 +17,8 @@ A `Diagonal` type, for instance, may not have its sparsity pattern changed.
 hasfixedsparsity(::Any) = false
 
 # functionality should be clear, there are implicit values.
-issparse(A) = false
-issparse(A::SparseStoreOrFormat) = true
+issparse(A) = issparse(typeof(A))
+issparse(::Type{A}) where {A} = false
 issparse(::Type{<:SparseStoreOrFormat}) = true
 
 """
