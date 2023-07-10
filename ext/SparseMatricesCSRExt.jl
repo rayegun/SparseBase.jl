@@ -31,7 +31,7 @@ function Base.convert(
     rowptrs, colvals, v = convert(Vector{Tindex}, getrowptr(A)), 
         convert(Vector{Tindex}, getcolval(A)), convert(Vector{Tvalues}, getnzval(A))
     return SinglyCompressedStore{Tvalues,RowMajor(),Tindex,typeof(v),typeof(rowptrs),2}(
-        rowptrs, colvals, v, size(A, 2), size(A, 1), false, zero(Tvalues)
+        rowptrs, colvals, v, size(A)
     )
 end
 
@@ -44,7 +44,7 @@ function Base.convert(
         copy(reinterpret(CIndex{Tindex}, getcolval(A)))
     v = convert(Vector{Tvalues}, getnzval(A))
     return SinglyCompressedStore{Tvalues,RowMajor(),CIndex{Tindex},typeof(v),typeof(rowptrs),2}(
-        rowptrs, colvals, v, size(A, 2), size(A, 1), false, zero(Tvalues)
+        rowptrs, colvals, v, size(A)
     )
 end
 

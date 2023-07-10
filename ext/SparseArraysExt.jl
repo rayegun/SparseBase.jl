@@ -29,7 +29,7 @@ function Base.convert(
 ) where {Tvalues,Tindex}
     colptrs, rowvals, v = getcolptr(A), getrowval(A), getnzval(A)
     return SinglyCompressedStore{Tvalues,ColMajor(),Tindex,typeof(v),typeof(rowvals),2}(
-        colptrs, rowvals, v, size(A)..., false, zero(Tvalues)
+        colptrs, rowvals, v, size(A)
     )
 end
 
@@ -42,7 +42,7 @@ function Base.convert(
     copy_oftype(getrowval(A), Tinew),
     Tvnew.(getnzval(A))
     return SinglyCompressedStore{Tvalues,ColMajor(),Tinew,typeof(v),typeof(rowvals),2}(
-        colptrs, rowvals, v, size(A)..., false, zero(Tvnew)
+        colptrs, rowvals, v, size(A)
     )
 end
 function Base.convert(
@@ -108,7 +108,7 @@ function Base.convert(
     A = copy(A')
     colptrs, rowvals, v = getcolptr(A), getrowval(A), getnzval(A)
     return SinglyCompressedStore{Tvalues,RowMajor(),Tindex,typeof(v),typeof(rowvals),2}(
-        colptrs, rowvals, v, size(A)..., false, zero(Tvalues)
+        colptrs, rowvals, v, size(A)
     )
 end
 
@@ -122,7 +122,7 @@ function Base.convert(
     copy_oftype(getrowval(A), Tinew),
     Tvnew.(getnzval(A))
     return SinglyCompressedStore{Tvalues,RowMajor(),Tinew,typeof(v),typeof(rowvals),2}(
-        colptrs, rowvals, v, size(A)..., false, zero(Tvnew)
+        colptrs, rowvals, v, size(A)
     )
 end
 
