@@ -22,17 +22,6 @@ issparse(::Type{A}) where {A} = false
 issparse(::Type{<:SparseStoreOrFormat}) = true
 
 """
-    UniformValue{T}
-
-Simple wrapper struct that denotes a uniform value for array input
-(all stored values are equal to a single value such as `true`).
-"""
-struct UniformValue{T}
-    val::T
-end
-Base.eltype(::UniformValue{T}) where {T} = T
-
-"""
     deuniform!(A)::A
 
 If an array supports an iso representation convert it to
@@ -147,6 +136,7 @@ Iterables over the stored indices of `A`. May be a direct view into internals,
 but is invalid to modify. May be lazy iterables.
 """
 function storedindices end
+function storedindices! end
 
 """
     storedvalues(A)
@@ -156,6 +146,7 @@ but this is not a requirement, and so shouldn't be used to modify A.
 Must be returned in the same order as `storedindices`.
 """
 function storedvalues end
+function storedvalues! end
 
 """
     findstored(A)
@@ -165,6 +156,7 @@ May be a direct view into internals,
 but this is not a requirement, and so shouldn't be used to modify A. 
 """
 function findstored end
+function findstored! end
 
 # Conversions:
 ##############

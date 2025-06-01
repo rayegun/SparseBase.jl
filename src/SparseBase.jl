@@ -14,8 +14,9 @@ const ColMajor = StorageOrders.ColMajor
 const RuntimeOrder = StorageOrders.RuntimeOrder
 const NoOrder = StorageOrders.NoOrder
 
-include("abstract.jl")
 include("novalue.jl")
+using .NoValues
+include("abstract.jl")
 include("structapi.jl")
 
 include("operators.jl")
@@ -26,6 +27,7 @@ include("executors.jl")
 include("base.jl")
 include("utilities.jl")
 include("communication.jl")
+include("axes.jl")
 # ITERATION FUNCTIONALITY:
 ##########################
 

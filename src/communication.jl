@@ -108,7 +108,7 @@ end
 Base.IndexStyle(::Type{ContinuousPartitioning{N}}) where {N} = IndexCartesian()
 Base.size(p::ContinuousPartitioning) = length.(p.index_starts)
 @inline function Base.getindex(
-    p::ContinuousPartitioning{N}, I::Vararg{<:Integer,N}
+    p::ContinuousPartitioning{N}, I::Vararg{Integer,N}
 ) where {N}
     return UnitRange.(getindex.(p.index_starts, I), getindex.(p.index_ends, I))
 end

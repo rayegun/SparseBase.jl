@@ -38,7 +38,7 @@ import Base:
     min,
     max
 
-export NoValue, novalue, isnovalue, NoValueException, nonnovaluetype
+export NoValue, novalue, isnovalue, NoValueException, rmnovaluetype
 
 """
     NoValue
@@ -96,14 +96,13 @@ Any
 rmnovaluetype(::Type{T}) where {T} = typesplit(T, NoValue)
 
 function rmnovaluetype_checked(T::Type)
-    R = nonnovaluetype(T)
+    R = rmnovaluetype(T)
     R >: T && error("could not compute non-novalue type")
     return R
 end
 
 promote_rule(::Type{NoValue}, S::Type) = S
-# punt for now on figuring this out.
-# promote_rule(T::Type{Union{Nothing, NoValue}}, S::Type) = Union{S, Nothing, NoValue}
+promote_rule(T::Type{Union{Nothing, NoValue}}, S::Type) = Union{S, Nothing, NoValue}
 # function promote_rule(T::Type{>:Union{Nothing, NoValue}}, S::Type)
 #     R = nonnothingtype(T)
 #     R >: T && return Any
@@ -122,11 +121,10 @@ promote_rule(::Type{NoValue}, S::Type) = S
 #     return Union{R, NoValue}
 # end
 
-# punt for now on figuring this out:
-# convert(::Type{T}, x::T) where {T>:NoValue} = x
-# convert(::Type{T}, x::T) where {T>:Union{NoValue, Nothing}} = x
-# convert(::Type{T}, x) where {T>:NoValue} = convert(nonmissingtype_checked(T), x)
-# convert(::Type{T}, x) where {T>:Union{NoValue, Nothing}} = convert(nonmissingtype_checked(nonnothingtype_checked(T)), x)
+convert(::Type{T}, x::T) where {T>:NoValue} = x
+convert(::Type{T}, x::T) where {T>:Union{NoValue, Nothing}} = x
+convert(::Type{T}, x) where {T>:NoValue} = convert(rmnovaluetype_checked(T), x)
+convert(::Type{T}, x) where {T>:Union{NoValue, Nothing}} = convert(rmnovaluetype_checked(nonnothingtype_checked(T)), x)
 
 function convert(::Type{T}, ::NoValue) where {T}
     return ArgumentError(
@@ -208,53 +206,9 @@ for f in (:(Base.float), :(Base.complex))
 end
 
 # Binary operators/functions
-for f in (:(+), :(-), :(*), :(/), :(^), :(mod), :(rem))
+for f in (:(+), :(-), :(*), :(/), :(^), :(mod), :(rem), :(min), :(max))
     @eval begin
         ($f)(::NoValue, ::NoValue) = novalue
     end
 end
-
-for f in (:(+), :(*))
-    @eval begin
-        ($f)(::NoValue, B::Any) = B
-        ($f)(A::Any, ::NoValue) = A
-    end
-end
-
-(-)(::NoValue, B::Any) = -B
-(-)(A::Any, ::NoValue) = A
-
-# not sure about /, ^, mod and rem. 
-
-# div(::NoValue, ::NoValue, r::RoundingMode) = missing
-# div(::NoValue, ::Number, r::RoundingMode) = missing
-# div(::Number, ::NoValue, r::RoundingMode) = missing
-
-min(::NoValue, ::NoValue) = novalue
-min(::NoValue, B::Any) = B
-min(A::Any, ::NoValue) = A
-max(::NoValue, ::NoValue) = novalue
-max(::NoValue, B::Any) = B
-max(A::Any, ::NoValue) = A
-
-# Bit operators
-(&)(::NoValue, ::NoValue) = novalue
-(&)(::NoValue, b::Bool) = b
-(&)(b::Bool, ::NoValue) = b
-(&)(::NoValue, b::Integer) = b
-(&)(b::Integer, ::NoValue) = b
-(|)(::NoValue, ::NoValue) = novalue
-(|)(::NoValue, b::Bool) = b
-(|)(b::Bool, ::NoValue) = b
-(|)(::NoValue, b::Integer) = b
-(|)(b::Integer, ::NoValue) = b
-xor(::NoValue, ::NoValue) = novalue
-xor(::NoValue, b::Bool) = b
-xor(b::Bool, ::NoValue) = b
-xor(::NoValue, b::Integer) = b
-xor(b::Integer, ::NoValue) = b
-
-*(::NoValue, x::Union{AbstractString,AbstractChar}) = x
-*(d::Union{AbstractString,AbstractChar}, ::NoValue) = d
-
 end

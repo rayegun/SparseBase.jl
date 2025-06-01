@@ -4,6 +4,7 @@ function StorageOrders.comptime_storageorder(
 ) where {Order}
     return Order
 end
+
 abstract type AbstractSparseFormat{Tv,Tfill,Order,Ti,N} <: AbstractArray{Tv,N} end
 function StorageOrders.comptime_storageorder(
     ::AbstractSparseFormat{<:Any,<:Any,Order}
@@ -11,6 +12,7 @@ function StorageOrders.comptime_storageorder(
     return Order
 end
 
+# TODO: Why did I need these? Most should be taken care of by being <: AA
 Base.ndims(::AbstractSparseStore{<:Any,<:Any,<:Any,<:Any,<:Any,N}) where {N} = N
 Base.size(A::AbstractSparseStore) = length.(axes(A))
 Base.size(A::AbstractSparseStore, d) = d <= ndims(A) ? size(A)[d] : 1
@@ -40,9 +42,12 @@ function filltype(::AbstractSparseStore)
     )
 end
 
-storedeltype(T::Type) = eltype(T)
+storedeltype(T::Type) = dropnovalue(eltype(T))
 storedeltype(A) = storedeltype(typeof(A))
-storedeltype(::Type{<:SparseStoreOrFormat{T}}) where {T} = @isdefined(T) ? T : Any
+storedeltype(::Type{<:SparseStoreOrFormat{T}}) where {T} = @isdefined(T) ? dropnovalue(T) : Any
+dropnovalue(U::Union) = Base.typesplit(U, NoValue)
+dropnovalue(T) = T
+dropnovalue(::Type{NoValue}) = throw(ArgumentError("Cannot dropnovalue NoValue."))
 
 indexeltype(::Type) = Any
 indexeltype(::Type{Base.Bottom}) = throw(ArgumentError("Union{} does not have elements"))

@@ -1,19 +1,26 @@
 """
-    CoordinateStore
+    CoordinateStore{Tv, Ti, V, I, N} <: AbstractSparseStore{Tv, RuntimeOrder(), Ti, V, I, N}
 
+# Parameters
+  - `Tv`: The type of the stored values.
+  - `Ti`: The type of the stored indices.
+  - `V`: The type of the value storage array.
+  - `I`: The type of the index storage array.
+  - `N`: The number of dimensions of the store.
 """
 mutable struct CoordinateStore{Tv,Ti,V,I,N} <:
                AbstractSparseStore{Tv,RuntimeOrder(),Ti,V,I,N}
-    indices::NTuple{N,I}
-    v::V
+    indices::NTuple{N,I} # Struct of Arrays format, in lex order.
+    v::V 
 
     bounds::NTuple{N,Int}
 
     isuniform::Bool
     uniformv::Tv
 
-    issorted::Bool
+    issorted::Bool # If the indices are sorted (*except* the last dimension)
     sortorder::StorageOrder
+    isjumbled::Bool # if the last dimension is sorted.
     iscoalesced::Bool
     function CoordinateStore{Tv,Ti,V,I,N}(
         indices::NTuple{N,I},
@@ -24,29 +31,15 @@ mutable struct CoordinateStore{Tv,Ti,V,I,N} <:
         issorted::Bool,
         sortorder::StorageOrder,
         iscoalesced::Bool,
+        isjumbled::Bool
     ) where {Tv,Ti,V,I,N}
         all(i -> (length(i) == length(indices[1])), indices) ||
             throw(DimensionMismatch("All vectors in indices must have equal length."))
         # TODO: checkindices on input
         return new{Tv,Ti,V,I,N}(
-            indices, v, bounds, isuniform, uniformv, issorted, sortorder, iscoalesced
+            indices, v, bounds, isuniform, uniformv, issorted, sortorder, iscoalesced, isjumbled
         )
     end
-end
-
-function CoordinateStore(
-    indices::NTuple{N,I},
-    v::V,
-    size=maximum.(indices);
-    sortorder=ColMajor(),
-    isuniform=false,
-    uniformv=defaultfill(eltype(V)),
-    issorted=false,
-    iscoalesced=false,
-) where {N,I,V}
-    return CoordinateStore{eltype(V),eltype(I),V,I,N}(
-        indices, v, size, isuniform, uniformv, issorted, sortorder, iscoalesced
-    )
 end
 
 function CoordinateStore{Tv,Ti,N}(
@@ -56,6 +49,7 @@ function CoordinateStore{Tv,Ti,N}(
     uniformv=defaultfill(Tv),
     issorted=false,
     iscoalesced=false,
+    isjumbled=true,
 ) where {Tv,Ti,N}
     return CoordinateStore(
         ntuple(i -> Vector{Ti}(), N),
@@ -66,6 +60,57 @@ function CoordinateStore{Tv,Ti,N}(
         uniformv,
         issorted,
         iscoalesced,
+        isjumbled
+    )
+end
+
+function CoordinateStore{Tv, Ti}(
+    indices::NTuple{N},
+    v,
+    size=maximum.(indices);
+    sortorder=ColMajor(),
+    isuniform=false,
+    uniformv=defaultfill(Tv),
+    issorted=false,
+    iscoalesced=false,
+    isjumbled=true,
+) where {Tv, Ti, N}
+    indices = convert.(AbstractArray{Ti}, indices)
+    v = convert(AbstractArray{Tv}, v),
+    return CoordinateStore{Tv,Ti,typeof(v),eltype(indices),N}(
+        indices, v,
+        size, isuniform, uniformv, issorted, sortorder, iscoalesced, isjumbled
+    )
+end
+function CoordinateStore{Tv}(
+    indices::NTuple{N, I},
+    v,
+    size=maximum.(indices);
+    sortorder=ColMajor(),
+    isuniform=false,
+    uniformv=defaultfill(Tv),
+    issorted=false,
+    iscoalesced=false,
+    isjumbled=true,
+) where {Tv,N,I}
+    return CoordinateStore{Tv, eltype(I)}(
+        indices, v,
+        size; isuniform, uniformv, issorted, sortorder, iscoalesced, isjumbled
+    )
+end
+function CoordinateStore(
+    indices::NTuple{N,I},
+    v::V,
+    size=maximum.(indices);
+    sortorder=ColMajor(),
+    isuniform=false,
+    uniformv=defaultfill(eltype(V)),
+    issorted=false,
+    iscoalesced=false,
+    isjumbled=true,
+) where {N,I,V}
+    return CoordinateStore{eltype(V),eltype(I)}(
+        indices, v, size, isuniform, uniformv, issorted, sortorder, iscoalesced, isjumbled
     )
 end
 
@@ -91,10 +136,6 @@ function sortcoalesce(C::CoordinateStore, coalesceop=second)
     )
 end
 
-# function Base.similar(coo::CoordinateStore{Tv, Ti, V, I, N}) where {Tv, Ti, V, I, N}
-#  #TODO
-# end
-
 # Compressed store defns:
 ##########################
 abstract type AbstractCompressedStore{Tvalues,Order,Tindex,V,I,N} <:
@@ -115,20 +156,66 @@ mutable struct SinglyCompressedStore{Tvalues,Order,Tindex,V,I,N} <:
 
     isuniform::Bool
     uniformv::Tvalues
+    isjumbled::Bool # whether last dimension is unordered (within the row | col)
 end
 
+function SinglyCompressedStore{Tv, Order, Ti}(
+    ptr, idx, v, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(eltype(Tv)),
+    isjumbled=false
+) where {Tv, Order, Ti}
+    ptr = convert(AbstractArray{Ti}, ptr)
+    idx = convert(AbstractArray{Ti}, idx)
+    v = convert(AbstractArray{Tv}, v)
+    size = Order === ColMajor() ? size : (size[2], size[1])
+    return SinglyCompressedStore{Tv,Order,Ti,typeof(v),typeof(ptr),2}(
+        ptr, idx, v,
+        size..., isuniform, uniformv, isjumbled
+    )
+end
+function SinglyCompressedStore{Tv, Order}(
+    ptr::I, idx::I, v, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(Tv),
+    isjumbled=false
+) where {Tv, Order, I}
+    return SinglyCompressedStore{Tv,Order,eltype(I)}(
+        ptr, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
+function SinglyCompressedStore{Tv}(
+    order::StorageOrder, ptr::I, idx::I, v, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(Tv),
+    isjumbled=false
+) where {Tv, I}
+    return SinglyCompressedStore{Tv,order,eltype(I)}(
+        ptr, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
 function SinglyCompressedStore(
-    order::StorageOrder,
-    ptr::I,
-    idx::I,
-    v::V,
-    size::Dims{2};
+    order::StorageOrder, ptr::I, idx::I, v::V, size::Dims{2};
     isuniform=false,
     uniformv=defaultfill(eltype(V)),
-) where {I,V}
-    size = order === ColMajor() ? size : (size[2], size[1])
-    return SinglyCompressedStore{eltype(V),order,eltype(I),V,I,2}(
-        ptr, idx, v, size..., isuniform, uniformv
+    isjumbled=false
+) where {I, V}
+    return SinglyCompressedStore{eltype(V),order,eltype(I)}(
+        ptr, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
+
+function SinglyCompressedStore{Tv, Order, Ti}(
+    size::Dims{2} = (Int(typemax(Ti)), Int(typemax(Ti)));
+    isuniform=false, uniformv=defaultfill(eltype(Tv)),
+    isjumbled=false
+) where {Tv, Order, Ti}
+    return SinglyCompressedStore(
+        # Don't create a full size array, this can be done on wait.
+        Order, Ti[], Ti[], Tv[], size; isuniform, uniformv, isjumbled
     )
 end
 
@@ -136,18 +223,23 @@ const CSCStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,ColMajor(),
 const CSRStore{Tvalues,Tindex,V,I,N} = SinglyCompressedStore{Tvalues,RowMajor(),Tindex,V,I,N}
 
 function CSCStore(
-    ptr::I, idx::I, v::V, size::Dims{2}; isuniform=false, uniformv=defaultfill(eltype(V))
+    ptr::I, idx::I, v::V, size::Dims{2}; 
+    isuniform=false, uniformv=defaultfill(eltype(V)), isjumbled=false
 ) where {I,V}
-    return SinglyCompressedStore(ColMajor(), ptr, idx, v, size; isuniform, uniformv)
+    return SinglyCompressedStore(
+        ColMajor(), ptr, idx, v, size; 
+        isuniform, uniformv, isjumbled
+    )
 end
 function CSRStore(
-    ptr::I, idx::I, v::V, size::Dims{2}; isuniform=false, uniformv=defaultfill(eltype(V))
+    ptr::I, idx::I, v::V, size::Dims{2}; 
+    isuniform=false, uniformv=defaultfill(eltype(V)), isjumbled=false
 ) where {I,V}
-    return SinglyCompressedStore(RowMajor(), ptr, idx, v, size; isuniform, uniformv)
+    return SinglyCompressedStore(
+        RowMajor(), ptr, idx, v, size; 
+        isuniform, uniformv, isjumbled
+    )
 end
-
-CSCStore{Tv,Ti}() where {Tv,Ti} = CSCStore(Ti[], Ti[], Tv[], (0, 0))
-CSRStore{Tv,Ti}() where {Tv,Ti} = CSRStore(Ti[], Ti[], Tv[], (0, 0))
 
 mutable struct DoublyCompressedStore{Tvalues,Order,Tindex,V,I,N} <:
                AbstractCompressedStore{Tvalues,Order,Tindex,V,I,N}
@@ -168,21 +260,84 @@ mutable struct DoublyCompressedStore{Tvalues,Order,Tindex,V,I,N} <:
 
     isuniform::Bool
     uniformv::Tvalues
+    isjumbled::Bool # whether last dimension is unordered (within the row | col)
 end
 
-function DoublyCompressedStore(
-    order::StorageOrder,
-    ptr::I,
-    h::I,
-    idx::I,
-    v::V,
-    size::Dims{2};
+function DoublyCompressedStore{Tv, Order, Ti}(
+    ptr, h, idx, v, size::Dims{2};
     isuniform=false,
-    uniformv=defaultfill(eltype(V)),
+    uniformv=defaultfill(eltype(Tv)), isjumbled=false
+) where {Tv, Order, Ti}
+    ptr = convert(AbstractArray{Ti}, ptr)
+    idx = convert(AbstractArray{Ti}, idx)
+    h = convert(AbstractArray{Ti}, h)
+    v = convert(AbstractArray{Tv}, v)
+    size = Order === ColMajor() ? size : (size[2], size[1])
+    return DoublyCompressedStore{Tv,Order,Ti,typeof(v),typeof(ptr),2}(
+        ptr, h, idx, v,
+        size..., isuniform, uniformv, isjumbled
+    )
+end
+function DoublyCompressedStore{Tv, Order}(
+    ptr::I, h::I, idx::I, v, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(Tv), isjumbled=false
+) where {Tv, Order, I}
+    return DoublyCompressedStore{Tv,Order,eltype(I)}(
+        ptr, h, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
+function DoublyCompressedStore{Tv}(
+    order::StorageOrder, ptr::I, h::I, idx::I, v, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(Tv), isjumbled=false
+) where {Tv, I}
+    return DoublyCompressedStore{Tv,order,eltype(I)}(
+        ptr, h, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
+function DoublyCompressedStore(
+    order::StorageOrder, ptr::I, h::I, idx::I, v::V, size::Dims{2};
+    isuniform=false,
+    uniformv=defaultfill(eltype(V)), isjumbled=false
+) where {I, V}
+    return DoublyCompressedStore{eltype(V),order,eltype(I)}(
+        ptr, h, idx, v,
+        size; isuniform, uniformv, isjumbled
+    )
+end
+
+function DoublyCompressedStore{Tv, Order, Ti}(
+    size::Dims{2} = (Int(typemax(Ti)), Int(typemax(Ti)));
+    isuniform=false, uniformv=defaultfill(eltype(Tv)), isjumbled=false
+) where {Tv, Order, Ti}
+    return DoublyCompressedStore(
+        # Don't create a full size array, this can be done on wait.
+        Order, Ti[], Ti[], Ti[], Tv[], size; isuniform, uniformv, isjumbled
+    )
+end
+
+const DCSCStore{Tvalues,Tindex,V,I,N} = DoublyCompressedStore{Tvalues,ColMajor(),Tindex,V,I,N}
+const DCSRStore{Tvalues,Tindex,V,I,N} = DoublyCompressedStore{Tvalues,RowMajor(),Tindex,V,I,N}
+
+function DCSCStore(
+    ptr::I, h::I, idx::I, v::V, size::Dims{2};
+    isuniform=false, uniformv=defaultfill(eltype(V)), isjumbled=false
 ) where {I,V}
-    size = order === ColMajor() ? size : (size[2], size[1])
-    return DoublyCompressedStore{eltype(V),order,eltype(I),V,I,N}(
-        ptr, h, idx, v, size..., isuniform, uniformv
+    return DoublyCompressedStore(
+        ColMajor(), ptr, h, idx, v, size;
+        isuniform, uniformv, isjumbled
+    )
+end
+function CSRStore(
+    ptr::I, h::I, idx::I, v::V, size::Dims{2};
+    isuniform=false, uniformv=defaultfill(eltype(V)), isjumbled=false
+) where {I,V}
+    return DoublyCompressedStore(
+        RowMajor(), ptr, h, idx, v, size;
+        isuniform, uniformv, isjumbled
     )
 end
 
@@ -199,6 +354,7 @@ mutable struct ByteMapStore{Tvalues,Order,V,I,N} <:
 
     isuniform::Bool
     uniformv::Tvalues
+
     function ByteMapStore{Tvalues,Order,V,I,N}(
         bytemap::I, v::V, isuniform::Bool, uniformv::Tvalues
     ) where {Tvalues,Order,N,V<:AbstractArray{Tvalues,N},I<:AbstractArray{Bool,N}}
@@ -243,5 +399,5 @@ isuniformvalued(S::AbstractSparseStore) = S.isuniform
 
 # TODO: DIA
 # TODO: ELLPACK
-# TODO: Dist formats here or higher level?
+# TODO: Dist formats here or higher level? I suspect higher level
 # TODO: Hash, and add hash to DCS[R | C]
