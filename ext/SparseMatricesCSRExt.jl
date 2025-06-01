@@ -22,47 +22,45 @@ StorageOrders.comptime_storageorder(::Type{<:SparseMatrixCSR}) = RowMajor()
 
 #TODO: determine if Cindices <-> Bi == 0 is possible no-copy
 
-# convert SparseMatrixCSR < - > CSCStore
+# convert SparseMatrixCSR < - > CSRStore
 function Base.convert(
     ::SparseBase.Executor,
-    ::Type{<:CSRStore{Tvalues,Tindex}},
-    A::SparseMatrixCSR{1},
+    ::Type{<:CSRStore{Tvalues}},
+    A::SparseMatrixCSR{1,Tvalues,Tindex},
 ) where {Tvalues,Tindex}
     rowptrs, colvals, v = convert(Vector{Tindex}, getrowptr(A)), 
         convert(Vector{Tindex}, getcolval(A)), convert(Vector{Tvalues}, getnzval(A))
-    return SinglyCompressedStore{Tvalues,RowMajor(),Tindex,typeof(v),typeof(rowptrs),2}(
+    return SinglyCompressedStore{Tvalues,RowMajor(),typeof(v),typeof(rowptrs),typeof(colvals),2}(
         rowptrs, colvals, v, size(A)
     )
 end
 
 function Base.convert(
     ::SparseBase.Executor,
-    ::Type{<:CSRStore{Tvalues,CIndex{Tindex}}},
-    A::SparseMatrixCSR{0,<:Any,Tindex},
+    ::Type{<:CSRStore{Tvalues}},
+    A::SparseMatrixCSR{0,Tvalues,Tindex},
 ) where {Tvalues,Tindex}
     rowptrs, colvals = copy(reinterpret(CIndex{Tindex}, getrowptr(A))), 
         copy(reinterpret(CIndex{Tindex}, getcolval(A)))
     v = convert(Vector{Tvalues}, getnzval(A))
-    return SinglyCompressedStore{Tvalues,RowMajor(),CIndex{Tindex},typeof(v),typeof(rowptrs),2}(
+    return SinglyCompressedStore{Tvalues,RowMajor(),typeof(v),typeof(rowptrs),typeof(colvals),2}(
         rowptrs, colvals, v, size(A)
     )
 end
-
-# TODO: handle SparseMatrixCSR{0, Tvalues, Tindex} case for Tinew
 
 function Base.convert(
     E::SparseBase.Executor,
     ::Type{<:CSRStore{Tvnew}},
     A::SparseMatrixCSR{<:Any, Tvalues,Tindex},
 ) where {Tvalues,Tindex,Tvnew}
-    convert(E, CSRStore{Tvnew, Tindex}, A)
+    convert(E, CSRStore{Tvnew}, A)
 end
 function Base.convert(
     E::SparseBase.Executor,
     ::Type{<:CSRStore},
     A::SparseMatrixCSR{<:Any, Tvalues,Tindex},
 ) where {Tvalues,Tindex}
-    convert(E, CSRStore{Tvalues, Tindex}, A)
+    convert(E, CSRStore{Tvalues}, A)
 end
 
 function Base.convert(T::Type{<:CSRStore}, s::SparseMatrixCSR)
@@ -70,29 +68,34 @@ function Base.convert(T::Type{<:CSRStore}, s::SparseMatrixCSR)
 end
 
 function Base.convert(
-    ::SparseBase.Executor, ::Type{SparseMatrixCSR{1, Tv,Ti}}, A::CSRStore
-) where {Tv,Ti}
+    ::SparseBase.Executor, ::Type{SparseMatrixCSR{1, Tv,Ti}}, A::CSRStore{Tv,V,P,I,2}
+) where {Tv,Ti,V,P,I}
     v = isuniformvalued(A) ? fill!(similar(A.v, Tv, length(A.idx)), A.uniformv) : A.v
+    ptr = copy_oftype(A.ptr, Ti)
+    idx = copy_oftype(A.idx, Ti)
     return SparseMatrixCSR{1}(
-        size(A)..., convert(Vector{Ti},A.ptr), convert(Vector{Ti},A.idx), convert(Vector{Tv},v)
+        size(A)..., ptr, idx, v
     )
 end
 
 function Base.convert(
-    ::SparseBase.Executor, ::Type{SparseMatrixCSR{0, Tv,Ti}}, A::CSRStore{<:Any, CIndex{Tiold}}
-) where {Tv,Ti, Tiold}
-    rowptrs = copy_oftype(reinterpret(Tiold, A.ptrs), Ti)
-    colvals = copy_oftype(reinterpret(Tiold, A.idx), Ti)
+    ::SparseBase.Executor, ::Type{SparseMatrixCSR{0, Tv,Ti}}, A::CSRStore{<:Any,<:Any,P,I,2}
+) where {Tv,Ti,P,I}
+    # Assuming P and I contain CIndex types for 0-based indexing
+    rowptrs = copy_oftype(reinterpret(eltype(eltype(P)), A.ptr), Ti)
+    colvals = copy_oftype(reinterpret(eltype(eltype(I)), A.idx), Ti)
     v = isuniformvalued(A) ? fill!(similar(A.v, Tv, length(A.idx)), A.uniformv) : A.v
     return SparseMatrixCSR{0}(
-        size(A)..., rowptrs, colvals, convert(Tv,v)
+        size(A)..., rowptrs, colvals, convert(Vector{Tv}, v)
     )
 end
 
 function Base.convert(
-    E::SparseBase.Executor, ::Type{<:SparseMatrixCSR}, A::CSRStore{Tv, Ti}
-) where {Tv, Ti}
-    Bi = Ti <: CIndex ? 0 : 1
+    E::SparseBase.Executor, ::Type{<:SparseMatrixCSR}, A::CSRStore{Tv,<:Any,P,I,2}
+) where {Tv,P,I}
+    # Determine indexing base from element types
+    Bi = (eltype(P) <: CIndex || eltype(I) <: CIndex) ? 0 : 1
+    Ti = Bi == 0 ? Int : Int  # Default to Int for index type
     return convert(E, SparseMatrixCSR{Bi, Tv, Ti}, A)
 end
 
@@ -104,8 +107,8 @@ end
 ############################
 function Base.convert(
     ::SparseBase.Executor,
-    ::Type{<:CoordinateStore{Tvalues,Tindex}},
-    A::SparseMatrixCSR{1},
+    ::Type{<:CoordinateStore{Tvalues}},
+    A::SparseMatrixCSR{1,Tvalues,Tindex},
 ) where {Tvalues,Tindex}
     rows, cols, v = findnz(A)
     return CoordinateStore(
@@ -115,8 +118,8 @@ function Base.convert(
 end
 function Base.convert(
     ::SparseBase.Executor,
-    ::Type{<:CoordinateStore{Tvalues,CIndex{Tindex}}},
-    A::SparseMatrixCSR{0, <:Any, Tindex},
+    ::Type{<:CoordinateStore{Tvalues}},
+    A::SparseMatrixCSR{0, Tvalues, Tindex},
 ) where {Tvalues,Tindex}
     rows, cols, v = findnz(A)
     rows, cols = copy(reinterpret(CIndex{Tindex}, rows)), copy(reinterpret(CIndex{Tindex}, cols))
@@ -131,7 +134,7 @@ function Base.convert(
     ::Type{<:CoordinateStore},
     A::SparseMatrixCSR{<:Any, Tvalues, Tindex},
 ) where {Tvalues,Tindex}
-    return convert(E, CoordinateStore{Tvalues, Tindex}, A)
+    return convert(E, CoordinateStore{Tvalues}, A)
 end
 
 function Base.convert(T::Type{<:CoordinateStore}, s::SparseMatrixCSR)
@@ -141,21 +144,22 @@ end
 function Base.convert(
     ::SparseBase.Executor,
     ::Type{SparseMatrixCSR{1,Tv,Ti}},
-    A::CoordinateStore{Tvalues, Tindex, <:Any, <:Any, 2},
-) where {Tv,Ti, Tvalues, Tindex}
+    A::CoordinateStore{Tvalues, <:Any, <:Any, 2},
+) where {Tv,Ti, Tvalues}
     v = isuniformvalued(A) ? fill!(similar(A.v, length(A.indices[1])), A.uniformv) : A.v
+    rows, cols = convert.(AbstractArray{Ti}, A.indices)
     return sparsecsr(
-        convert.(AbstractArray{Ti}, A.indices)...,
+        rows, cols,
         convert(AbstractArray{Tv}, v), size(A)...)
 end
 
 function Base.convert(
     E::SparseBase.Executor,
     ::Type{<:SparseMatrixCSR},
-    A::CoordinateStore{Tvalues,Tindex,<:Any,<:Any,2},
-) where {Tvalues,Tindex}
-    Bi = Tindex <: CIndex ? 0 : 1
-    return convert(E, SparseMatrixCSR{Bi, Tvalues,Tindex}, A)
+    A::CoordinateStore{Tvalues,<:Any,<:Any,2},
+) where {Tvalues}
+    # Default to 1-based indexing and Int type
+    return convert(E, SparseMatrixCSR{1, Tvalues, Int}, A)
 end
 
 function Base.convert(T::Type{<:SparseMatrixCSR}, s::CoordinateStore)

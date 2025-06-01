@@ -109,11 +109,11 @@ function desymmetrizer(rows, cols, values, symm)
 end
 
 function MatrixMarket.mmread(
-    ::Type{<:CoordinateStore{Tv,Ti}}, filename; desymmetrize=true
-) where {Tv,Ti}
+    ::Type{<:CoordinateStore{Tv}}, filename; Ti::Type{<:Integer}=Int, desymmetrize=true
+) where {Tv}
     result = _mmread(filename, Tv, Ti)
     if result isa AbstractArray
-        convert(CoordinateStore{Tv,Ti}, result)
+        convert(CoordinateStore{Tv}, result)
     else # TODO: need to take care of symm here somehow. Or handle higher up.
         rows, cols, values, nrows, ncols, nstored, rep, field, symm = result
         rows, cols, values =
@@ -131,9 +131,9 @@ function MatrixMarket.mmread(
 end
 
 function MatrixMarket.mmread(
-    T::Type{<:SinglyCompressedStore{Tv,<:Any,Ti}}, filename; desymmetrize=true
-) where {Tv,Ti}
-    coo = mmread(CoordinateStore{Tv,Ti}, filename; desymmetrize)
+    T::Type{<:SinglyCompressedStore{Tv}}, filename; Ti::Type{<:Integer}=Int, desymmetrize=true
+) where {Tv}
+    coo = mmread(CoordinateStore{Tv}, filename; Ti, desymmetrize)
     return convert(T, coo)
 end
 end

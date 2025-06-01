@@ -1,4 +1,4 @@
-abstract type AbstractSparseStore{Tv,Order,Ti,V,I,N} end
+abstract type AbstractSparseStore{Tv,Order,V,N} end
 function StorageOrders.comptime_storageorder(
     ::AbstractSparseStore{<:Any,Order}
 ) where {Order}
@@ -13,12 +13,12 @@ function StorageOrders.comptime_storageorder(
 end
 
 # TODO: Why did I need these? Most should be taken care of by being <: AA
-Base.ndims(::AbstractSparseStore{<:Any,<:Any,<:Any,<:Any,<:Any,N}) where {N} = N
+Base.ndims(::AbstractSparseStore{<:Any,<:Any,<:Any,N}) where {N} = N
 Base.size(A::AbstractSparseStore) = length.(axes(A))
 Base.size(A::AbstractSparseStore, d) = d <= ndims(A) ? size(A)[d] : 1
 Base.axes(A::AbstractSparseStore, d) = d <= ndims(A) ? axes(A)[d] : Base.OneTo(1)
 const SparseStoreOrFormat{Tv,Order,Ti,N} = Union{
-    <:AbstractSparseStore{Tv,Order,Ti,<:Any,<:Any,N},
+    <:AbstractSparseStore{Tv,Order,<:Any,N},
     <:AbstractSparseFormat{Tv,<:Any,Order,Ti,N},
 } where {Tv,Order,Ti,N}
 Base.size(S::SparseStoreOrFormat, d) = d <= ndims(S) ? size(S)[d] : 1

@@ -136,8 +136,8 @@ end
     The idea being to perform distribution of Julia vectors for use with these codes.
   - Eventually a port of DISTAL to be based on Finch/Spartan may be feasible.
 """
-mutable struct DistributedSparseStore{Tv,Order,Ti,V,I,S,N,C} <:
-               AbstractSparseStore{Tv,Order,Ti,V,I,N}
+mutable struct DistributedSparseStore{Tv,Order,V,S,N,C} <:
+               AbstractSparseStore{Tv,Order,V,N}
     globalsize::NTuple{N,Int}
     localstore::S
     partition::ContinuousPartitioning{N}
@@ -154,14 +154,14 @@ Get the local index range (expressed in terms of global indices) of the given ra
 function localindices end
 
 function DistributedSparseStore(
-    localstore::AbstractSparseStore{Tv,Order,Ti,V,I,N}, partition, comm
-) where {Tv,Order,Ti,V,I,N}
+    localstore::AbstractSparseStore{Tv,Order,V,N}, partition, comm
+) where {Tv,Order,V,N}
     partition = if partition isa ContinuousPartitioning
         partition
     else
         ContinuousPartitioning(partition...)
     end
-    return DistributedSparseStore{Tv,Order,Ti,V,I,typeof(localstore),N,typeof(comm)}(
+    return DistributedSparseStore{Tv,Order,V,typeof(localstore),N,typeof(comm)}(
         maximum.(partition.index_ends), localstore, partition, comm
     )
 end

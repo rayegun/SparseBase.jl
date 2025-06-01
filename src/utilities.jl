@@ -35,13 +35,14 @@ swapindices(::ColMajor, indices...) = reverse(indices)
 # pretty bad vs double transpose / builder but fine for testing.
 function _build(
     ::Type{<:SinglyCompressedStore{<:Any,order}},
-    A::CoordinateStore{Tv,Ti,<:Any,<:Any,2},
+    A::CoordinateStore{Tv,<:Any,<:Any,2},
     coalesceop=+,
-) where {order,Tv,Ti}
+) where {order,Tv}
     A.sortorder = order
     indices, values, isuniform = _sortcoalesce(A, coalesceop)
     toptr, idx = swapindices(order, indices...)
-    pointers = zeros(Ti, (order === ColMajor() ? size(A, 2) : size(A, 1)) + 1)
+    # Int here is pessimistic, but we don't have a great detection method here.
+    pointers = zeros(Int, (order === ColMajor() ? size(A, 2) : size(A, 1)) + 1)
     for i in toptr
         pointers[i + 1] += 1
     end
@@ -72,8 +73,8 @@ _updater!(newV, i, oldV, j) = (newV) # uniform = uniform
 Base.sortperm(x::Array{CIndex{T}}) where {T} = sortperm(reinterpret(T, x))
 
 function _sortcoalesce(
-    A::CoordinateStore{Tv,Ti,<:Any,<:Any,N}, coalesceop=second
-) where {Tv,Ti,N}
+    A::CoordinateStore{Tv,<:Any,<:Any,N}, coalesceop=second
+) where {Tv,N}
     order = storageorder(A)
     (order === ColMajor() || order === RowMajor()) ||
         (throw(ArgumentError("Unknown sorting order.")))
@@ -86,7 +87,8 @@ function _sortcoalesce(
     else
         LinearIndices(size(A))
     end
-    linearindices = zeros(Ti, nstored(A))
+    # pessimistic, need to fix.
+    linearindices = zeros(Int, nstored(A))
     indices = A.indices
     for i in eachindex(linearindices)
         linearindices[i] = linear[getindex.(indices, i)...]
